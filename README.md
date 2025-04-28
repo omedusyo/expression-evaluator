@@ -52,6 +52,17 @@ npm run build
 npm run preview
 ```
 
+### Deployment
+
+This project is configured for easy deployment to GitHub Pages.
+
+```bash
+# Deploy to GitHub Pages
+npm run deploy
+```
+
+Alternatively, just push to the main branch and the GitHub Actions workflow will automatically deploy the application.
+
 ## How to Use
 
 1. Enter an arithmetic expression (e.g., `2 + 3 * 4`) in the input field
