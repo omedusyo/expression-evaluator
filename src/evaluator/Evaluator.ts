@@ -103,30 +103,43 @@ class Evaluator {
   }
 
   private processVariableDeclaration(declaration: string): string {
-    const parts = declaration.split('=');
-    if (parts.length !== 2) {
+    // Find the first equals sign that's not part of an arrow (=>)
+    let eqPos = -1;
+    for (let i = 0; i < declaration.length; i++) {
+      if (declaration[i] === '=' && (i + 1 >= declaration.length || declaration[i + 1] !== '>')) {
+        eqPos = i;
+        break;
+      }
+    }
+    
+    if (eqPos === -1) {
       throw new Error('Invalid variable declaration. Format: let name = expression');
     }
-
-    const variableName = parts[0].trim();
+    
+    const variableName = declaration.substring(0, eqPos).trim();
+    const expression = declaration.substring(eqPos + 1).trim();
+    
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(variableName)) {
       throw new Error(`Invalid variable name: ${variableName}`);
     }
 
-    const expression = parts[1].trim();
-    const tokens = tokenize(expression);
-    const ast = parse(tokens);
-    const value = this.evaluateExpression(ast);
+    try {
+      const tokens = tokenize(expression);
+      const ast = parse(tokens);
+      const value = this.evaluateExpression(ast);
 
-    this.variables.set(variableName, value);
-    
-    // Format the return value based on the type
-    if (typeof value !== 'number') {
-      const params = value.params.join(', ');
-      return `${variableName} = <function(${params})>`;
+      this.variables.set(variableName, value);
+      
+      // Format the return value based on the type
+      if (typeof value !== 'number') {
+        const params = value.params.join(', ');
+        return `${variableName} = <function(${params})>`;
+      }
+      
+      return `${variableName} = ${value}`;
+    } catch (error) {
+      throw error;
     }
-    
-    return `${variableName} = ${value}`;
   }
 
   private evaluateExpression(expr: Expression, localVars: Map<string, number | Closure> = new Map()): number | Closure {
