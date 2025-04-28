@@ -7,6 +7,7 @@ export enum TokenType {
   COMMA,
   EQUALS,
   KEYWORD,
+  ARROW,    // => for lambda expressions
   EOF
 }
 
@@ -20,7 +21,7 @@ export function tokenize(input: string): Token[] {
   let pos = 0;
 
   // Keywords
-  const keywords = ['let', 'def'];
+  const keywords = ['let', 'def', 'fn'];
 
   while (pos < input.length) {
     const char = input[pos];
@@ -64,10 +65,15 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Equals sign
+    // Arrow or Equals
     if (char === '=') {
-      tokens.push({ type: TokenType.EQUALS, value: '=' });
-      pos++;
+      if (pos + 1 < input.length && input[pos + 1] === '>') {
+        tokens.push({ type: TokenType.ARROW, value: '=>' });
+        pos += 2;
+      } else {
+        tokens.push({ type: TokenType.EQUALS, value: '=' });
+        pos++;
+      }
       continue;
     }
 

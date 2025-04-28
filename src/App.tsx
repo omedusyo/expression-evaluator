@@ -8,6 +8,7 @@ function App() {
   const [error, setError] = useState('')
   const [variables, setVariables] = useState<Map<string, number>>(new Map())
   const [functions, setFunctions] = useState<string[]>([])
+  const [closures, setClosures] = useState<string[]>([])
   const evaluatorRef = useRef<Evaluator>(new Evaluator())
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -19,9 +20,10 @@ function App() {
         setHistory([`${input} = ${evalResult}`, ...history])
         setInput('')
         
-        // Update variables and functions state after evaluation
+        // Update variables, functions, and closures state after evaluation
         setVariables(evaluatorRef.current.getVariables())
         setFunctions(evaluatorRef.current.getFunctions())
+        setClosures(evaluatorRef.current.getClosures())
       } catch (err) {
         setError((err as Error).message)
       }
@@ -46,7 +48,7 @@ function App() {
       {error && <div className="result error">{error}</div>}
       {!error && <div className="result">{result}</div>}
       
-      <div className="variables-functions-container">
+      <div className="environment-container">
         <div className="variables">
           <h3>Current Variables</h3>
           {variables.size === 0 ? (
@@ -63,19 +65,37 @@ function App() {
           )}
         </div>
         
-        <div className="functions">
-          <h3>Defined Functions</h3>
-          {functions.length === 0 ? (
-            <div className="functions-empty">No functions defined yet</div>
-          ) : (
-            <div className="functions-list">
-              {functions.map((name) => (
-                <div key={name} className="function-item">
-                  <span className="function-name">{name}</span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="functions-closures">
+          <div className="functions">
+            <h3>Defined Functions</h3>
+            {functions.length === 0 ? (
+              <div className="functions-empty">No functions defined yet</div>
+            ) : (
+              <div className="functions-list">
+                {functions.map((name) => (
+                  <div key={name} className="function-item">
+                    <span className="function-name">{name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="closures">
+            <h3>Closures</h3>
+            {closures.length === 0 ? (
+              <div className="closures-empty">No closures defined yet</div>
+            ) : (
+              <div className="closures-list">
+                {closures.map((name) => (
+                  <div key={name} className="closure-item">
+                    <span className="closure-name">{name}</span>
+                    <span className="closure-type">(function)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

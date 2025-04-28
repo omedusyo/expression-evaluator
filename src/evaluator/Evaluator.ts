@@ -7,12 +7,33 @@ interface FunctionDefinition {
   body: Expression;
 }
 
+// Define a type for closures
+interface Closure {
+  params: string[];
+  body: Expression;
+  environment: Map<string, number>;
+}
+
 class Evaluator {
-  private variables: Map<string, number> = new Map();
+  private variables: Map<string, number | Closure> = new Map();
   private functions: Map<string, FunctionDefinition> = new Map();
   
   public getVariables(): Map<string, number> {
-    return new Map(this.variables);
+    // Filter out closures and only return number variables
+    const numberVars = new Map<string, number>();
+    for (const [key, value] of this.variables.entries()) {
+      if (typeof value === 'number') {
+        numberVars.set(key, value);
+      }
+    }
+    return numberVars;
+  }
+  
+  public getClosures(): string[] {
+    // Return names of closure variables
+    return Array.from(this.variables.entries())
+      .filter(([_, value]) => typeof value !== 'number')
+      .map(([key, _]) => key);
   }
   
   public getFunctions(): string[] {
@@ -33,7 +54,15 @@ class Evaluator {
     // Otherwise evaluate as an expression
     const tokens = tokenize(input);
     const ast = parse(tokens);
-    return this.evaluateExpression(ast);
+    const result = this.evaluateExpression(ast);
+    
+    // Convert closure to string representation
+    if (typeof result !== 'number') {
+      const params = result.params.join(', ');
+      return `<function(${params})>`;
+    }
+    
+    return result;
   }
   
   private processFunctionDefinition(definition: string): string {
@@ -90,13 +119,45 @@ class Evaluator {
     const value = this.evaluateExpression(ast);
 
     this.variables.set(variableName, value);
+    
+    // Format the return value based on the type
+    if (typeof value !== 'number') {
+      const params = value.params.join(', ');
+      return `${variableName} = <function(${params})>`;
+    }
+    
     return `${variableName} = ${value}`;
   }
 
-  private evaluateExpression(expr: Expression, localVars: Map<string, number> = new Map()): number {
+  private evaluateExpression(expr: Expression, localVars: Map<string, number | Closure> = new Map()): number | Closure {
     switch (expr.type) {
       case 'number':
         return expr.value;
+      
+      case 'lambda':
+        // Create a closure by capturing the current environment
+        const capturedEnv = new Map<string, number>();
+        
+        // Copy local variables (excluding closures)
+        for (const [key, value] of localVars.entries()) {
+          if (typeof value === 'number') {
+            capturedEnv.set(key, value);
+          }
+        }
+        
+        // Copy global variables (excluding closures)
+        for (const [key, value] of this.variables.entries()) {
+          if (typeof value === 'number' && !capturedEnv.has(key)) {
+            capturedEnv.set(key, value);
+          }
+        }
+        
+        // Return a closure
+        return {
+          params: expr.params,
+          body: expr.body,
+          environment: capturedEnv
+        };
       
       case 'variable':
         // First check local variables (function parameters)
@@ -116,6 +177,11 @@ class Evaluator {
       case 'binary':
         const left = this.evaluateExpression(expr.left, localVars);
         const right = this.evaluateExpression(expr.right, localVars);
+        
+        // Binary operations only work on numbers
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          throw new Error('Cannot perform arithmetic operations on functions');
+        }
         
         switch (expr.operator) {
           case '+':
@@ -143,30 +209,89 @@ class Evaluator {
     }
   }
   
-  private evaluateFunctionCall(expr: { type: 'functionCall'; name: string; args: Expression[] }, localVars: Map<string, number>): number {
-    const func = this.functions.get(expr.name);
-    if (!func) {
-      throw new Error(`Undefined function: ${expr.name}`);
+  private evaluateFunctionCall(expr: { type: 'functionCall'; name: string; args: Expression[]; lambda?: Expression }, localVars: Map<string, number | Closure>): number | Closure {
+    // Check if this is an anonymous lambda expression call
+    if (expr.name === '__anonymous__' && expr.lambda) {
+      // Evaluate the lambda to get a closure
+      const closure = this.evaluateExpression(expr.lambda, localVars) as Closure;
+      
+      if (typeof closure === 'number') {
+        throw new Error('Expected a function, got a number');
+      }
+      
+      // Check argument count
+      if (expr.args.length !== closure.params.length) {
+        throw new Error(`Anonymous function expects ${closure.params.length} arguments, but got ${expr.args.length}`);
+      }
+      
+      // Evaluate arguments
+      const argValues = expr.args.map(arg => this.evaluateExpression(arg, localVars));
+      
+      // Create local environment for function execution
+      const funcLocalVars = new Map<string, number | Closure>(closure.environment);
+      
+      // Bind parameters to arguments
+      for (let i = 0; i < closure.params.length; i++) {
+        funcLocalVars.set(closure.params[i], argValues[i]);
+      }
+      
+      // Evaluate function body
+      return this.evaluateExpression(closure.body, funcLocalVars);
     }
     
-    // Check argument count
-    if (expr.args.length !== func.params.length) {
-      throw new Error(`Function ${expr.name} expects ${func.params.length} arguments, but got ${expr.args.length}`);
+    // First, try to find a named function
+    const namedFunc = this.functions.get(expr.name);
+    
+    // If we found a named function, evaluate it
+    if (namedFunc) {
+      // Check argument count
+      if (expr.args.length !== namedFunc.params.length) {
+        throw new Error(`Function ${expr.name} expects ${namedFunc.params.length} arguments, but got ${expr.args.length}`);
+      }
+      
+      // Evaluate arguments
+      const argValues = expr.args.map(arg => this.evaluateExpression(arg, localVars));
+      
+      // Create a new local variable environment for the function execution
+      const funcLocalVars = new Map<string, number | Closure>();
+      
+      // Bind parameter names to argument values
+      for (let i = 0; i < namedFunc.params.length; i++) {
+        funcLocalVars.set(namedFunc.params[i], argValues[i]);
+      }
+      
+      // Evaluate the function body with the local variables
+      return this.evaluateExpression(namedFunc.body, funcLocalVars);
     }
     
-    // Evaluate arguments
-    const argValues = expr.args.map(arg => this.evaluateExpression(arg, localVars));
+    // If it's not a named function, check if it's a closure variable
+    const closureVar = localVars.get(expr.name) || this.variables.get(expr.name);
     
-    // Create a new local variable environment for the function execution
-    const funcLocalVars = new Map(localVars);
-    
-    // Bind parameter names to argument values
-    for (let i = 0; i < func.params.length; i++) {
-      funcLocalVars.set(func.params[i], argValues[i]);
+    // If we found a closure, evaluate it
+    if (closureVar && typeof closureVar !== 'number') {
+      const closure = closureVar as Closure;
+      
+      // Check argument count
+      if (expr.args.length !== closure.params.length) {
+        throw new Error(`Function ${expr.name} expects ${closure.params.length} arguments, but got ${expr.args.length}`);
+      }
+      
+      // Evaluate arguments
+      const argValues = expr.args.map(arg => this.evaluateExpression(arg, localVars));
+      
+      // Create a new local variable environment based on the closure's captured environment
+      const closureLocalVars = new Map<string, number | Closure>(closure.environment);
+      
+      // Bind parameter names to argument values
+      for (let i = 0; i < closure.params.length; i++) {
+        closureLocalVars.set(closure.params[i], argValues[i]);
+      }
+      
+      // Evaluate the function body with the closure's environment plus arguments
+      return this.evaluateExpression(closure.body, closureLocalVars);
     }
     
-    // Evaluate the function body with the local variables
-    return this.evaluateExpression(func.body, funcLocalVars);
+    throw new Error(`Undefined function or closure: ${expr.name}`);
   }
 }
 

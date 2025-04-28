@@ -100,6 +100,41 @@ describe('Evaluator', () => {
       expect(evaluator.evaluate('g(f(2))')).toBe(11); // g(f(2)) = g(4) = f(4) + 3 = 8 + 3 = 11
     });
   });
+  
+  describe('closures', () => {
+    it('creates a lambda function and assigns it to a variable', () => {
+      evaluator.evaluate('let add1 = fn(x) => x + 1');
+      expect(evaluator.evaluate('add1(5)')).toBe(6);
+    });
+    
+    it('supports closures with multiple parameters', () => {
+      evaluator.evaluate('let sum = fn(a, b, c) => a + b + c');
+      expect(evaluator.evaluate('sum(1, 2, 3)')).toBe(6);
+    });
+    
+    it('captures variables from the environment', () => {
+      evaluator.evaluate('let x = 10');
+      evaluator.evaluate('let addX = fn(y) => x + y');
+      expect(evaluator.evaluate('addX(5)')).toBe(15);
+    });
+    
+    it('creates proper closures that capture the environment at creation time', () => {
+      evaluator.evaluate('let x = 5');
+      evaluator.evaluate('let addX = fn(y) => x + y');
+      evaluator.evaluate('let x = 10'); // Redefine x, shouldn't affect the closure
+      expect(evaluator.evaluate('addX(3)')).toBe(8); // Should use x=5, not x=10
+    });
+    
+    it('supports higher-order functions', () => {
+      evaluator.evaluate('let makeAdder = fn(n) => fn(x) => x + n');
+      evaluator.evaluate('let add5 = makeAdder(5)');
+      expect(evaluator.evaluate('add5(10)')).toBe(15);
+    });
+    
+    it('evaluates anonymous lambda expressions directly', () => {
+      expect(evaluator.evaluate('(fn(x) => x * x)(4)')).toBe(16);
+    });
+  });
 
   describe('error handling', () => {
     it('throws error for undefined variables', () => {

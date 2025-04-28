@@ -41,7 +41,7 @@ h1 {
   margin-bottom: 20px;
 }
 
-.variables-functions-container {
+.environment-container {
   display: flex;
   gap: 20px;
   margin-top: 20px;
@@ -49,11 +49,21 @@ h1 {
   padding-top: 10px;
 }
 
-.variables, .functions {
+.variables, .functions-closures {
   flex: 1;
 }
 
-.variables-empty, .functions-empty {
+.functions-closures {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.functions, .closures {
+  flex: 1;
+}
+
+.variables-empty, .functions-empty, .closures-empty {
   color: #888;
   font-style: italic;
   padding: 8px 0;
@@ -101,6 +111,32 @@ h1 {
 .function-name {
   font-weight: bold;
   color: #673ab7;
+}
+
+.closures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.closure-item {
+  background-color: #f0f8ff;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-family: monospace;
+}
+
+.closure-name {
+  font-weight: bold;
+  color: #009688;
+}
+
+.closure-type {
+  color: #777;
+  font-style: italic;
 }
 
 .history {
