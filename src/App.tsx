@@ -1,13 +1,20 @@
 import { useState, KeyboardEvent, useRef } from 'react'
 import Evaluator from './evaluator/Evaluator'
 
+interface FunctionDetails {
+  name: string;
+  params: string[];
+  body: string;
+  visible: boolean;
+}
+
 function App() {
   const [input, setInput] = useState('')
   const [result, setResult] = useState('')
   const [history, setHistory] = useState<string[]>([])
   const [error, setError] = useState('')
   const [variables, setVariables] = useState<Map<string, number>>(new Map())
-  const [functions, setFunctions] = useState<string[]>([])
+  const [functions, setFunctions] = useState<FunctionDetails[]>([])
   const [closures, setClosures] = useState<string[]>([])
   const evaluatorRef = useRef<Evaluator>(new Evaluator())
 
@@ -22,7 +29,24 @@ function App() {
         
         // Update variables, functions, and closures state after evaluation
         setVariables(evaluatorRef.current.getVariables())
-        setFunctions(evaluatorRef.current.getFunctions())
+        
+        // Get functions and add visibility flag for UI toggling
+        const funcDetails = evaluatorRef.current.getFunctions().map(func => ({
+          ...func,
+          visible: false // Default to collapsed
+        }));
+        
+        // Preserve expanded state of already displayed functions
+        if (functions.length > 0) {
+          for (const newFunc of funcDetails) {
+            const existingFunc = functions.find(f => f.name === newFunc.name);
+            if (existingFunc) {
+              newFunc.visible = existingFunc.visible;
+            }
+          }
+        }
+        
+        setFunctions(funcDetails)
         setClosures(evaluatorRef.current.getClosures())
       } catch (err) {
         setError((err as Error).message)
@@ -72,9 +96,28 @@ function App() {
               <div className="functions-empty">No functions defined yet</div>
             ) : (
               <div className="functions-list">
-                {functions.map((name) => (
-                  <div key={name} className="function-item">
-                    <span className="function-name">{name}</span>
+                {functions.map((func) => (
+                  <div key={func.name} className="function-item">
+                    <div
+                      className="function-header"
+                      onClick={() => {
+                        // Toggle visibility for this function
+                        setFunctions(functions.map(f => 
+                          f.name === func.name ? {...f, visible: !f.visible} : f
+                        ));
+                      }}
+                    >
+                      <span className="function-name">{func.name}</span>
+                      <span className="function-toggle">{func.visible ? '▼' : '▶'}</span>
+                    </div>
+                    
+                    {func.visible && (
+                      <div className="function-details">
+                        <div className="function-signature">
+                          <span className="keyword">def</span> {func.name}({func.params.join(', ')}) = {func.body}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -36,8 +36,48 @@ class Evaluator {
       .map(([key, _]) => key);
   }
   
-  public getFunctions(): string[] {
-    return Array.from(this.functions.keys());
+  public getFunctions(): Array<{name: string, params: string[], body: string}> {
+    return Array.from(this.functions.entries()).map(([name, funcDef]) => {
+      // Convert the AST body to a string representation
+      let bodyStr = '';
+      try {
+        // Simple string representation of the body by getting the source
+        bodyStr = this.expressionToString(funcDef.body);
+      } catch (e) {
+        bodyStr = '(error displaying function body)';
+      }
+      
+      return {
+        name,
+        params: funcDef.params,
+        body: bodyStr
+      };
+    });
+  }
+  
+  // Helper to convert an expression to a string representation
+  private expressionToString(expr: Expression): string {
+    switch (expr.type) {
+      case 'number':
+        return expr.value.toString();
+      
+      case 'variable':
+        return expr.name;
+      
+      case 'binary':
+        return `${this.expressionToString(expr.left)} ${expr.operator} ${this.expressionToString(expr.right)}`;
+      
+      case 'functionCall':
+        const args = expr.args.map(arg => this.expressionToString(arg)).join(', ');
+        return `${expr.name}(${args})`;
+      
+      case 'lambda':
+        const params = expr.params.join(', ');
+        return `fn(${params}) => ${this.expressionToString(expr.body)}`;
+      
+      default:
+        return '(unknown expression)';
+    }
   }
 
   public evaluate(input: string): number | string {
