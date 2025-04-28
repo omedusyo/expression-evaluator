@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react'
+import { useState, KeyboardEvent, useRef } from 'react'
 import Evaluator from './evaluator/Evaluator'
 
 function App() {
@@ -6,13 +6,13 @@ function App() {
   const [result, setResult] = useState('')
   const [history, setHistory] = useState<string[]>([])
   const [error, setError] = useState('')
-  const evaluator = new Evaluator()
+  const evaluatorRef = useRef<Evaluator>(new Evaluator())
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       try {
         setError('')
-        const evalResult = evaluator.evaluate(input.trim())
+        const evalResult = evaluatorRef.current.evaluate(input.trim())
         setResult(evalResult.toString())
         setHistory([`${input} = ${evalResult}`, ...history])
         setInput('')
