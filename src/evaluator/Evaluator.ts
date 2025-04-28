@@ -3,6 +3,10 @@ import { Expression, parse } from './Parser';
 
 class Evaluator {
   private variables: Map<string, number> = new Map();
+  
+  public getVariables(): Map<string, number> {
+    return new Map(this.variables);
+  }
 
   public evaluate(input: string): number | string {
     // Check if it's a variable declaration
