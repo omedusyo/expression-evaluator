@@ -1,6 +1,6 @@
 # Expression Evaluator
 
-A simple web-based REPL for evaluating arithmetic expressions with variable support.
+A web-based REPL for evaluating arithmetic expressions with support for variables, functions, and closures.
 
 ## Features
 
@@ -9,7 +9,11 @@ A simple web-based REPL for evaluating arithmetic expressions with variable supp
 - Parentheses for grouping (`(2 + 3) * 4`)
 - Variable definition (`let x = 5`)
 - Variable usage in expressions (`x + 10`)
+- Function definition (`def f(x) = x * x`)
+- First-class functions and closures (`let add = fn(x) => x + 1`)
+- Higher-order functions (`let makeAdder = fn(n) => fn(x) => x + n`)
 - Expression history
+- Current environment display (variables, functions, and closures)
 
 ## Getting Started
 
@@ -55,6 +59,11 @@ npm run preview
 3. The result will be displayed below the input field
 4. To define a variable, use the `let` keyword (e.g., `let x = 10`)
 5. Variables can be used in subsequent expressions (e.g., `x * 5`)
+6. To define a function, use the `def` keyword (e.g., `def square(x) = x * x`)
+7. Call functions with arguments (e.g., `square(5)`)
+8. Define closures with the `fn` keyword (e.g., `let add = fn(x) => x + 1`)
+9. Create higher-order functions (e.g., `let makeAdder = fn(n) => fn(x) => x + n`)
+10. Call anonymous functions directly (e.g., `(fn(x) => x * x)(4)`)
 
 ## Implementation Details
 
@@ -67,9 +76,20 @@ The application uses a classic approach to expression evaluation:
 ### Grammar
 
 ```
-expression -> additive
-additive -> multiplicative ([+-] multiplicative)*
-multiplicative -> power ([*/] power)*
-power -> primary (^ primary)*
-primary -> NUMBER | IDENTIFIER | '(' expression ')'
+expression        -> additive
+additive          -> multiplicative ([+-] multiplicative)*
+multiplicative    -> power ([*/] power)*
+power             -> primary (^ primary)*
+primary           -> NUMBER | IDENTIFIER | functionCall | lambda | '(' expression ')'
+functionCall      -> IDENTIFIER '(' (expression (',' expression)*)? ')'
+lambda            -> 'fn' '(' (IDENTIFIER (',' IDENTIFIER)*)? ')' '=>' expression
 ```
+
+### Environment
+
+The evaluator maintains three types of values:
+- **Variables**: Numeric values assigned with `let` (e.g., `let x = 5`)
+- **Functions**: Named functions defined with `def` (e.g., `def f(x) = x + 1`)
+- **Closures**: First-class functions that capture their lexical environment
+
+The application UI displays the current state of all three environments, making it easy to see what variables, functions, and closures are available.
