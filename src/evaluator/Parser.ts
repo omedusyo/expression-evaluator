@@ -3,7 +3,8 @@ import { Token, TokenType } from './Tokenizer';
 export type Expression =
   | { type: 'number'; value: number }
   | { type: 'variable'; name: string }
-  | { type: 'binary'; operator: string; left: Expression; right: Expression };
+  | { type: 'binary'; operator: string; left: Expression; right: Expression }
+  | { type: 'functionCall'; name: string; args: Expression[] };
 
 export function parse(tokens: Token[]): Expression {
   let current = 0;
@@ -78,8 +79,36 @@ export function parse(tokens: Token[]): Expression {
       return { type: 'number', value: parseFloat(token.value) };
     }
 
-    if (match(TokenType.IDENTIFIER)) {
-      return { type: 'variable', name: token.value };
+    if (token.type === TokenType.IDENTIFIER) {
+      // Check for function call syntax
+      const name = consume().value;
+      
+      if (peek().type === TokenType.LPAREN) {
+        // This is a function call
+        consume(); // consume the left paren
+        const args: Expression[] = [];
+        
+        // Handle empty argument list
+        if (peek().type !== TokenType.RPAREN) {
+          args.push(expression());
+          
+          // Parse additional arguments
+          while (peek().type === TokenType.COMMA) {
+            consume(); // consume comma
+            args.push(expression());
+          }
+        }
+        
+        // Ensure we have a closing parenthesis
+        if (!match(TokenType.RPAREN)) {
+          throw new Error('Expected closing parenthesis in function call');
+        }
+        
+        return { type: 'functionCall', name, args };
+      }
+      
+      // It's a regular variable reference
+      return { type: 'variable', name };
     }
 
     if (match(TokenType.LPAREN)) {

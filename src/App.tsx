@@ -7,6 +7,7 @@ function App() {
   const [history, setHistory] = useState<string[]>([])
   const [error, setError] = useState('')
   const [variables, setVariables] = useState<Map<string, number>>(new Map())
+  const [functions, setFunctions] = useState<string[]>([])
   const evaluatorRef = useRef<Evaluator>(new Evaluator())
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -18,8 +19,9 @@ function App() {
         setHistory([`${input} = ${evalResult}`, ...history])
         setInput('')
         
-        // Update variables state after evaluation
+        // Update variables and functions state after evaluation
         setVariables(evaluatorRef.current.getVariables())
+        setFunctions(evaluatorRef.current.getFunctions())
       } catch (err) {
         setError((err as Error).message)
       }
@@ -44,20 +46,37 @@ function App() {
       {error && <div className="result error">{error}</div>}
       {!error && <div className="result">{result}</div>}
       
-      <div className="variables">
-        <h3>Current Variables</h3>
-        {variables.size === 0 ? (
-          <div className="variables-empty">No variables defined yet</div>
-        ) : (
-          <div className="variables-grid">
-            {Array.from(variables.entries()).map(([name, value]) => (
-              <div key={name} className="variable-item">
-                <span className="variable-name">{name}</span>
-                <span className="variable-value">{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="variables-functions-container">
+        <div className="variables">
+          <h3>Current Variables</h3>
+          {variables.size === 0 ? (
+            <div className="variables-empty">No variables defined yet</div>
+          ) : (
+            <div className="variables-grid">
+              {Array.from(variables.entries()).map(([name, value]) => (
+                <div key={name} className="variable-item">
+                  <span className="variable-name">{name}</span>
+                  <span className="variable-value">{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="functions">
+          <h3>Defined Functions</h3>
+          {functions.length === 0 ? (
+            <div className="functions-empty">No functions defined yet</div>
+          ) : (
+            <div className="functions-list">
+              {functions.map((name) => (
+                <div key={name} className="function-item">
+                  <span className="function-name">{name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="history">

@@ -4,6 +4,9 @@ export enum TokenType {
   OPERATOR,
   LPAREN,
   RPAREN,
+  COMMA,
+  EQUALS,
+  KEYWORD,
   EOF
 }
 
@@ -15,6 +18,9 @@ export interface Token {
 export function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let pos = 0;
+
+  // Keywords
+  const keywords = ['let', 'def'];
 
   while (pos < input.length) {
     const char = input[pos];
@@ -35,19 +41,39 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Parse identifiers (variable names)
+    // Parse identifiers and keywords
     if (/[a-zA-Z_]/.test(char)) {
       let value = '';
       while (pos < input.length && /[a-zA-Z0-9_]/.test(input[pos])) {
         value += input[pos++];
       }
-      tokens.push({ type: TokenType.IDENTIFIER, value });
+      
+      // Check if it's a keyword
+      if (keywords.includes(value)) {
+        tokens.push({ type: TokenType.KEYWORD, value });
+      } else {
+        tokens.push({ type: TokenType.IDENTIFIER, value });
+      }
       continue;
     }
 
     // Operators
     if (/[+\-*\/\^]/.test(char)) {
       tokens.push({ type: TokenType.OPERATOR, value: char });
+      pos++;
+      continue;
+    }
+
+    // Equals sign
+    if (char === '=') {
+      tokens.push({ type: TokenType.EQUALS, value: '=' });
+      pos++;
+      continue;
+    }
+
+    // Comma
+    if (char === ',') {
+      tokens.push({ type: TokenType.COMMA, value: ',' });
       pos++;
       continue;
     }
